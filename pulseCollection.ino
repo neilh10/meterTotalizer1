@@ -104,8 +104,8 @@ uint8_t ledCntr=0; //Simple method of controlling LED
   pinMode(PIN_TC0_TCLK0_ARD,INPUT_PULLUP);
   pinMode(PIN_TC0_TCLK1_ARD,INPUT_PULLUP);
   PIO_SetDebounceFilter(g_APinDescription[PIN_TC0_TCLK0_ARD].pPort,
-      g_APinDescription[PIN_TC0_TCLK0_ARD].ulPin  | g_APinDescription[PIN_TC0_TCLK2_ARD].ulPin,
-      PIN_DEBOUNCE_CUTOFF_FREQ_HZ);
+    g_APinDescription[PIN_TC0_TCLK0_ARD].ulPin  | g_APinDescription[PIN_TC0_TCLK2_ARD].ulPin,
+    PIN_DEBOUNCE_CUTOFF_FREQ_HZ);
      
   //TCx capture initialize
   //hardware\arduino\sam\system\cmsis\Device\atmel\sam3xa\include\sam3x8e.h

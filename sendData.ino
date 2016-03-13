@@ -9,10 +9,14 @@
  This uses version 2.0 of the Cosm.com API, 
  and specifies two meter readings.
 
+https://github.com/iobridge/ThingSpeak-Arduino-Examples/blob/master/Ethernet/Arduino_to_ThingSpeak.ino
  http://arduino.cc/en/Tutorial/CosmClientString
+ 
  This code is in the public domain. 
  
  User Configuration required for 
+  thingspeak.com
+  - 06L3T33R19XYW75M
   - api.cosm.com values 
   - Cosm.com Destination Address, IP# Address (DHCP client strings not working)
   - MAC address (MAC should be on Ethernet board, but hw doesn't support this right now)
@@ -20,9 +24,27 @@
  
 #include <SPI.h>
 #include <Ethernet.h>
+
 //#include "component_adc12b.h"
+//#define _WaterMeterDefXv_
+#define _WaterMeterDefTs_
 #define _WaterMeterDef_
-#ifdef _WaterMeterDef_
+
+#ifdef _WaterMeterDefTs_
+#elif defined(_WaterMeterDefXv_)
+#endif //_WaterMeterDefXx_
+
+#ifdef _WaterMeterDefTs_
+//POST https://api.thingspeak.com/update.json
+//     api_key=[]xxxx
+//     field1=EpochTime
+//     field2= Seq#
+//     field3=HouseMeter
+//     field4=GardenMeter
+//String APIKEY = "xxxxxPutHere";
+
+#define FEEDID 7205
+#elif defined(_WaterMeterDefXv_)
 //Datastreams ID meter1 meter2
 #define APIKEY         "3WhMGqIciR-MotAOMKhOxC_t0tiSAKxKRHA1WkUzRUJDST0g" // cosm api key
 #define FEEDID         71185 // your feed ID
@@ -34,6 +56,7 @@
 #define FEEDID         80470 // your feed ID
 #define USERAGENT      "WaterLevel Test" // user agent is the project name
 #endif  //
+
 // assign a MAC address for the ethernet controller.
 // fill in your address here: 
   byte mac[] = { 
@@ -48,10 +71,15 @@ EthernetClient client;
 
 // if you don't want to use DNS (and reduce your sketch size)
 // use the numeric IP instead of the name for the server:
+#if defined(_WaterMeterDefTs_)
+IPAddress cosmServerIp(54,164,214,198);      // numeric IP for api.thingspeak.com
+//char cosmServer[] = "api.thingspeak.com";
+#elif defined(_WaterMeterDefXv_)
 IPAddress cosmServerIp(216,52,233,121);      // numeric IP for api.cosm.com
 //char cosmServer[] = "api.cosm.com";   // name address for Cosm API
-
-unsigned long lastConnectionTime = 0;          // last time you connected to the server, in milliseconds
+#endif 
+unsigned long lastConnectionTime = 0; // last time connected to the server, in milliseconds
+unsigned short seqNumber = 0;          // increment per sample period sequence num
 boolean lastConnected = false;                 // state of the connection last time through the main loop
 
 
@@ -73,7 +101,7 @@ void setupSendData() {
     Ethernet.begin(mac, ip);
   }
   // print IP address:
-  Serial.print("IP address: ");
+  Serial.print("thisIP address: ");
   for (byte thisByte = 0; thisByte < 4; thisByte++) {
     // print the value of each byte of the IP address:
     Serial.print(Ethernet.localIP()[thisByte], DEC);
@@ -91,6 +119,28 @@ void sendPulseMeters() {
   //adc_enable_ts(ADC12B);
   //int sensorReading = analogRead(A11);  //Temperature 
   // convert the data to a String to send it:
+#ifdef _WaterMeterDefTs_
+
+ String dataString = "field1=";
+   //if(timeStatus() == timeNotSet) 
+   {
+    // time_t timeNow;
+    // (void)time(&timeNow);
+     //dataString += timeNow;
+     //dataString += seqNumber;//now();
+     //dataString += getNtpTime();
+      dataString += "0";
+   }
+  dataString += "&field2=";
+  dataString += ++seqNumber;
+
+  dataString += "&field3=";
+  dataString += meter1cntIncr;
+  // Append Meter2:
+  //int otherSensorReading = analogRead(A11);
+  dataString += "&field4=";
+  dataString += meter3cntIncr;
+#elif defined(_WaterMeterDefXv_)
 
   String dataString = "meter1,";
   dataString += meter1cntIncr;
@@ -99,7 +149,9 @@ void sendPulseMeters() {
   //int otherSensorReading = analogRead(A11);
   dataString += "\nmeter2,";
   dataString += meter3cntIncr;
-#ifndef _WaterMeterDef_ 
+  #endif //_WaterMeterDefXx_
+  
+#if !defined(_WaterMeterDef_) 
   dataString += "\ndepth1,";
   dataString += waterLevel1_mm;
   dataString += "\ndepth2,";
@@ -150,6 +202,25 @@ void sendHttpRequest(String thisData) {
   if (client.connect(cosmServerIp, 80)) {
     Serial.print("connected...");
     delay(10);
+
+#ifdef _WaterMeterDefTs_
+#if 1
+    // send the HTTP PUT request:
+    client.print("POST /update HTTP/1.1\n");
+    client.print("Host: api.thingspeak.com\n");
+    client.print("Connection: close\n");
+    client.print("X-THINGSPEAKAPIKEY: "+APIKEY+"\n");
+    //Serial.print(FEEDID);
+    client.print("Content-Type: application/x-www-form-urlencoded\n");
+    client.print("Content-Length: ");
+    client.print(thisData.length());
+    client.print("\n\n");
+ #endif
+    // here's the actual content of the PUT request:
+    client.println(thisData);
+    Serial.println(thisData);
+#elif defined(_WaterMeterDefXv_)
+
     // send the HTTP PUT request:
     client.print("PUT /v2/feeds/");
     client.print(FEEDID);
@@ -171,6 +242,7 @@ void sendHttpRequest(String thisData) {
     // here's the actual content of the PUT request:
     client.println(thisData);
     //Serial.println(thisData);
+ #endif //_WaterMeterDefXx_
     Serial.println("..delivered ");
     LedActivityUpdateSlow();
   } else {

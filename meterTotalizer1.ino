@@ -1,5 +1,5 @@
 /*
-  Meter Reader
+  Meter Totalizer Monitor
  
  Capture pulses from an inline Meter and then send them to the cloud.
 
@@ -10,14 +10,16 @@
  Circuit:
  * Digital realy closures attached to TCLK6,7,8
  * Ethernet shield attached to pins IPCS & 10, 11, 12, 13
- 
- updated 14 August 2012 with Due/SAM3X 
+
+ updated 13 March 2016 for ThingSpeak.com
+ updated 14 August 2012 with Due/SAM3X output to xively/cosm 
  created 15 March 2010  by Tom Igoe with input from Usman Haque and Joe Saavedra
  
  */
+#include <Time.h>
 
 //const unsigned long postingInterval = 5*60*1000;  //delay between updates to Webserver
-
+//NTPClient timeClient("us.pool.ntp.org", 3600, 60000);
 void setup() {
   int waitLp=0; 
   // start serial port:
@@ -27,7 +29,9 @@ void setup() {
     delay(1000);
     waitLp++;
   }
-  Serial.println("PulseMonitoring verXx starting");
+  Serial.println("PulseMonitoring ver160312 starting");
+
+  setupNtpTime();
   setupPulseCollection();
   
   setupSendData(); //Including ethernet declaration
